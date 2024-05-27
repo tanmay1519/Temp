@@ -1,14 +1,9 @@
 import os
-import re
 import fitz  # PyMuPDF
 import spacy
-from faker import Faker
 
 # Load spaCy model
 nlp = spacy.load("en_core_web_sm")
-
-# Initialize Faker
-fake = Faker()
 
 # Define input and output folders
 input_folder = 'FolderA'
@@ -25,14 +20,14 @@ def mask_pii(text):
     # Mask names and addresses
     for ent in doc.ents:
         if ent.label_ in ['PERSON', 'GPE', 'LOC']:
-            fake_value = fake.name() if ent.label_ == 'PERSON' else '[MASKED]'
-            masked_text = masked_text.replace(ent.text, fake_value)
+            masked_text = masked_text.replace(ent.text, '...')
     
     # Mask SSN/Aadhar numbers using regex
+    # You may need to customize this regex pattern based on your specific SSN/Aadhar number format
     ssn_pattern = r'\b\d{3}-\d{2}-\d{4}\b'  # Pattern for SSN (XXX-XX-XXXX)
     aadhar_pattern = r'\b\d{4} \d{4} \d{4}\b'  # Pattern for Aadhar (XXXX XXXX XXXX)
-    masked_text = re.sub(ssn_pattern, '[SSN MASKED]', masked_text)
-    masked_text = re.sub(aadhar_pattern, '[AADHAR MASKED]', masked_text)
+    masked_text = re.sub(ssn_pattern, '...', masked_text)
+    masked_text = re.sub(aadhar_pattern, '...', masked_text)
     
     return masked_text
 
