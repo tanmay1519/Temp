@@ -1,4 +1,5 @@
- import os
+import os
+import re
 import fitz  # PyMuPDF
 import spacy
 from faker import Faker
@@ -31,10 +32,19 @@ def mask_pii(text):
     """Mask PII in the given text."""
     doc = nlp(text)
     masked_text = text
+    
+    # Mask names and addresses
     for ent in doc.ents:
-        if ent.label_ in ['PERSON', 'ORG', 'GPE', 'LOC', 'DATE', 'TIME', 'MONEY', 'EMAIL', 'PHONE']:
+        if ent.label_ in ['PERSON', 'GPE', 'LOC']:
             fake_value = fake.name() if ent.label_ == 'PERSON' else '[MASKED]'
             masked_text = masked_text.replace(ent.text, fake_value)
+    
+    # Mask SSN/Aadhar numbers using regex
+    ssn_pattern = r'\b\d{3}-\d{2}-\d{4}\b'  # Pattern for SSN (XXX-XX-XXXX)
+    aadhar_pattern = r'\b\d{4} \d{4} \d{4}\b'  # Pattern for Aadhar (XXXX XXXX XXXX)
+    masked_text = re.sub(ssn_pattern, '[SSN MASKED]', masked_text)
+    masked_text = re.sub(aadhar_pattern, '[AADHAR MASKED]', masked_text)
+    
     return masked_text
 
 def create_pdf_from_text(text, pdf_path):
