@@ -3,8 +3,6 @@ import re
 import fitz  # PyMuPDF
 import spacy
 from faker import Faker
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
 
 # Load spaCy model
 nlp = spacy.load("en_core_web_sm")
@@ -18,15 +16,6 @@ output_folder = 'FolderB'
 
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
-
-def extract_text_from_pdf(pdf_path):
-    """Extract text from a PDF file."""
-    with fitz.open(pdf_path) as pdf_document:
-        text = ""
-        for page_num in range(pdf_document.page_count):
-            page = pdf_document[page_num]
-            text += page.get_text()
-    return text
 
 def mask_pii(text):
     """Mask PII in the given text."""
@@ -47,21 +36,6 @@ def mask_pii(text):
     
     return masked_text
 
-def create_pdf_from_text(text, pdf_path):
-    """Create a PDF file from text."""
-    c = canvas.Canvas(pdf_path, pagesize=letter)
-    width, height = letter
-    c.setFont("Helvetica", 12)
-    y = height - 40
-    for line in text.split('\n'):
-        if y < 40:
-            c.showPage()
-            c.setFont("Helvetica", 12)
-            y = height - 40
-        c.drawString(40, y, line)
-        y -= 14
-    c.save()
-
 def process_pdfs(input_folder, output_folder):
     """Process PDF files to mask PII and save to a new folder."""
     for filename in os.listdir(input_folder):
@@ -69,14 +43,22 @@ def process_pdfs(input_folder, output_folder):
             input_path = os.path.join(input_folder, filename)
             output_path = os.path.join(output_folder, filename)
             
-            # Extract text from PDF
-            text = extract_text_from_pdf(input_path)
+            # Open the PDF
+            pdf_document = fitz.open(input_path)
             
-            # Mask PII in the text
-            masked_text = mask_pii(text)
+            # Iterate through the pages
+            for page_num in range(pdf_document.page_count):
+                page = pdf_document[page_num]
+                text_instances = page.search_for(" ")
+                
+                for inst in text_instances:
+                    text = page.get_text("text", clip=inst)
+                    masked_text = mask_pii(text)
+                    page.insert_textbox(inst, masked_text, fontname="helv", fontsize=12)
             
-            # Create a new PDF with masked text
-            create_pdf_from_text(masked_text, output_path)
+            # Save the modified PDF to the output folder
+            pdf_document.save(output_path)
+            pdf_document.close()
 
 # Process all PDFs in the input folder
 process_pdfs(input_folder, output_folder)
