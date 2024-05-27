@@ -12,24 +12,17 @@ output_folder = 'FolderB'
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 
-def mask_pii(text):
+def mask_pii(text, entities):
     """Mask PII in the given text."""
-    doc = nlp(text)
     masked_text = text
-    
-    # Mask names and addresses
-    for ent in doc.ents:
-        if ent.label_ in ['PERSON', 'GPE', 'LOC']:
-            masked_text = masked_text.replace(ent.text, '...')
-    
-    # Mask SSN/Aadhar numbers using regex
-    # You may need to customize this regex pattern based on your specific SSN/Aadhar number format
-    ssn_pattern = r'\b\d{3}-\d{2}-\d{4}\b'  # Pattern for SSN (XXX-XX-XXXX)
-    aadhar_pattern = r'\b\d{4} \d{4} \d{4}\b'  # Pattern for Aadhar (XXXX XXXX XXXX)
-    masked_text = re.sub(ssn_pattern, '...', masked_text)
-    masked_text = re.sub(aadhar_pattern, '...', masked_text)
-    
+    for ent in entities:
+        masked_text = masked_text.replace(ent.text, '...')
     return masked_text
+
+def extract_entities(text):
+    """Extract entities using spaCy."""
+    doc = nlp(text)
+    return [ent for ent in doc.ents if ent.label_ in ['PERSON', 'GPE', 'LOC']]
 
 def process_pdfs(input_folder, output_folder):
     """Process PDF files to mask PII and save to a new folder."""
@@ -48,7 +41,8 @@ def process_pdfs(input_folder, output_folder):
                 
                 for inst in text_instances:
                     text = page.get_text("text", clip=inst)
-                    masked_text = mask_pii(text)
+                    entities = extract_entities(text)
+                    masked_text = mask_pii(text, entities)
                     page.insert_textbox(inst, masked_text, fontname="helv", fontsize=12)
             
             # Save the modified PDF to the output folder
